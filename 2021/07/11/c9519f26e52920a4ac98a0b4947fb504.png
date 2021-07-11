@@ -1,0 +1,1017 @@
+-------------------------------------[脚本后台配置区-建议把配置区加密并且把变量也改了]------------------------------------
+host="http://www.t3data.net:666/?6FA36D3705A89DD7" --后台调用地址
+appkey="dd3c8325f41646bd3cbbc2fa84e1cd16" --appkey
+basekey="p0NRVi5/cfUhJKWsLe4w+yvYZQuXTmoSz7qMrgl2xDAOFPdnbCa98kH61EtGB3jI" --base64密码集
+
+
+-- T3网络验证www.t3data.net:666
+-- 配置信息如何获取：
+-- appkey:在程序列表可以看到
+-- Base64编码集:点击程序的传输配置，全局加密改为开启，
+-- 加密类型改为Base64自定义编码集，然后就可以看到Base64编码集
+-- 
+-- 后台如何配置：
+-- 点击程序的传输配置，全局加密改为开启，
+-- 加密类型改为Base64自定义密码集，请求值加密和返回值加密开启，
+-- 时间戳校验开启，返回值格式设置为文本
+
+-------------------------------------[脚本代码运行区]------------------------------------
+web = gg.makeRequest
+
+
+local HexTable = {"0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F"}
+local A = 0x67452301
+local B = 0xefcdab89
+local C = 0x98badcfe
+local D = 0x10325476
+
+local S11 = 7
+local S12 = 12
+local S13 = 17
+local S14 = 22
+local S21 = 5
+local S22 = 9
+local S23 = 14
+local S24 = 20
+local S31 = 4
+local S32 = 11
+local S33 = 16
+local S34 = 23
+local S41 = 6
+local S42 = 10
+local S43 = 15
+local S44 = 21
+
+local function F(x,y,z)
+  return (x & y) | ((~x) & z)
+end
+local function G(x,y,z)
+  return (x & z) | (y & (~z))
+end
+local function H(x,y,z)
+  return x ~ y ~ z
+end
+local function I(x,y,z)
+  return y ~ (x | (~z))
+end
+local function FF(a,b,c,d,x,s,ac)
+  a = a + F(b,c,d) + x + ac
+  a = (((a & 0xffffffff) << s) | ((a & 0xffffffff) >> 32 - s)) + b
+  return a & 0xffffffff
+end
+local function GG(a,b,c,d,x,s,ac)
+  a = a + G(b,c,d) + x + ac
+  a = (((a & 0xffffffff) << s) | ((a & 0xffffffff) >> 32 - s)) + b
+  return a & 0xffffffff
+end
+local function HH(a,b,c,d,x,s,ac)
+  a = a + H(b,c,d) + x + ac
+  a = (((a & 0xffffffff) << s) | ((a & 0xffffffff) >> 32 - s)) + b
+  return a & 0xffffffff
+end
+local function II(a,b,c,d,x,s,ac)
+  a = a + I(b,c,d) + x + ac
+  a = (((a & 0xffffffff) << s) | ((a & 0xffffffff) >> 32 - s)) + b
+  return a & 0xffffffff
+end
+
+
+
+local function MD5StringFill(s)
+  local len = s:len()
+  local mod512 = len * 8 % 512
+  --需要填充的字节数
+  local fillSize = (448 - mod512) // 8
+  if mod512 > 448 then
+    fillSize = (960 - mod512) // 8
+  end
+
+  local rTab = {}
+
+  --记录当前byte在4个字节的偏移
+  local byteIndex = 1
+  for i = 1,len do
+    local index = (i - 1) // 4 + 1
+    rTab[index] = rTab[index] or 0
+    rTab[index] = rTab[index] | (s:byte(i) << (byteIndex - 1) * 8)
+    byteIndex = byteIndex + 1
+    if byteIndex == 5 then
+      byteIndex = 1
+    end
+  end
+  --先将最后一个字节组成4字节一组
+  --表示0x80是否已插入
+  local b0x80 = false
+  local tLen = #rTab
+  if byteIndex ~= 1 then
+    rTab[tLen] = rTab[tLen] | 0x80 << (byteIndex - 1) * 8
+    b0x80 = true
+  end
+
+  --将余下的字节补齐
+  for i = 1,fillSize // 4 do
+    if not b0x80 and i == 1 then
+      rTab[tLen + i] = 0x80
+     else
+      rTab[tLen + i] = 0x0
+    end
+  end
+
+  --后面加原始数据bit长度
+  local bitLen = math.floor(len * 8)
+  tLen = #rTab
+  rTab[tLen + 1] = bitLen & 0xffffffff
+  rTab[tLen + 2] = bitLen >> 32
+
+  return rTab
+end
+
+--	Func:	计算MD5
+--	Param:	string
+--	Return:	string
+---------------------------------------------
+
+function string.md5(s)
+  --填充
+  local fillTab = MD5StringFill(s)
+  local result = {A,B,C,D}
+
+  for i = 1,#fillTab // 16 do
+    local a = result[1]
+    local b = result[2]
+    local c = result[3]
+    local d = result[4]
+    local offset = (i - 1) * 16 + 1
+    --第一轮
+    a = FF(a, b, c, d, fillTab[offset + 0], S11, 0xd76aa478)
+    d = FF(d, a, b, c, fillTab[offset + 1], S12, 0xe8c7b756)
+    c = FF(c, d, a, b, fillTab[offset + 2], S13, 0x242070db)
+    b = FF(b, c, d, a, fillTab[offset + 3], S14, 0xc1bdceee)
+    a = FF(a, b, c, d, fillTab[offset + 4], S11, 0xf57c0faf)
+    d = FF(d, a, b, c, fillTab[offset + 5], S12, 0x4787c62a)
+    c = FF(c, d, a, b, fillTab[offset + 6], S13, 0xa8304613)
+    b = FF(b, c, d, a, fillTab[offset + 7], S14, 0xfd469501)
+    a = FF(a, b, c, d, fillTab[offset + 8], S11, 0x698098d8)
+    d = FF(d, a, b, c, fillTab[offset + 9], S12, 0x8b44f7af)
+    c = FF(c, d, a, b, fillTab[offset + 10], S13, 0xffff5bb1)
+    b = FF(b, c, d, a, fillTab[offset + 11], S14, 0x895cd7be)
+    a = FF(a, b, c, d, fillTab[offset + 12], S11, 0x6b901122)
+    d = FF(d, a, b, c, fillTab[offset + 13], S12, 0xfd987193)
+    c = FF(c, d, a, b, fillTab[offset + 14], S13, 0xa679438e)
+    b = FF(b, c, d, a, fillTab[offset + 15], S14, 0x49b40821)
+
+    --第二轮
+    a = GG(a, b, c, d, fillTab[offset + 1], S21, 0xf61e2562)
+    d = GG(d, a, b, c, fillTab[offset + 6], S22, 0xc040b340)
+    c = GG(c, d, a, b, fillTab[offset + 11], S23, 0x265e5a51)
+    b = GG(b, c, d, a, fillTab[offset + 0], S24, 0xe9b6c7aa)
+    a = GG(a, b, c, d, fillTab[offset + 5], S21, 0xd62f105d)
+    d = GG(d, a, b, c, fillTab[offset + 10], S22, 0x2441453)
+    c = GG(c, d, a, b, fillTab[offset + 15], S23, 0xd8a1e681)
+    b = GG(b, c, d, a, fillTab[offset + 4], S24, 0xe7d3fbc8)
+    a = GG(a, b, c, d, fillTab[offset + 9], S21, 0x21e1cde6)
+    d = GG(d, a, b, c, fillTab[offset + 14], S22, 0xc33707d6)
+    c = GG(c, d, a, b, fillTab[offset + 3], S23, 0xf4d50d87)
+    b = GG(b, c, d, a, fillTab[offset + 8], S24, 0x455a14ed)
+    a = GG(a, b, c, d, fillTab[offset + 13], S21, 0xa9e3e905)
+    d = GG(d, a, b, c, fillTab[offset + 2], S22, 0xfcefa3f8)
+    c = GG(c, d, a, b, fillTab[offset + 7], S23, 0x676f02d9)
+    b = GG(b, c, d, a, fillTab[offset + 12], S24, 0x8d2a4c8a)
+
+    --第三轮
+    a = HH(a, b, c, d, fillTab[offset + 5], S31, 0xfffa3942)
+    d = HH(d, a, b, c, fillTab[offset + 8], S32, 0x8771f681)
+    c = HH(c, d, a, b, fillTab[offset + 11], S33, 0x6d9d6122)
+    b = HH(b, c, d, a, fillTab[offset + 14], S34, 0xfde5380c)
+    a = HH(a, b, c, d, fillTab[offset + 1], S31, 0xa4beea44)
+    d = HH(d, a, b, c, fillTab[offset + 4], S32, 0x4bdecfa9)
+    c = HH(c, d, a, b, fillTab[offset + 7], S33, 0xf6bb4b60)
+    b = HH(b, c, d, a, fillTab[offset + 10], S34, 0xbebfbc70)
+    a = HH(a, b, c, d, fillTab[offset + 13], S31, 0x289b7ec6)
+    d = HH(d, a, b, c, fillTab[offset + 0], S32, 0xeaa127fa)
+    c = HH(c, d, a, b, fillTab[offset + 3], S33, 0xd4ef3085)
+    b = HH(b, c, d, a, fillTab[offset + 6], S34, 0x4881d05)
+    a = HH(a, b, c, d, fillTab[offset + 9], S31, 0xd9d4d039)
+    d = HH(d, a, b, c, fillTab[offset + 12], S32, 0xe6db99e5)
+    c = HH(c, d, a, b, fillTab[offset + 15], S33, 0x1fa27cf8)
+    b = HH(b, c, d, a, fillTab[offset + 2], S34, 0xc4ac5665)
+
+    --第四轮
+    a = II(a, b, c, d, fillTab[offset + 0], S41, 0xf4292244)
+    d = II(d, a, b, c, fillTab[offset + 7], S42, 0x432aff97)
+    c = II(c, d, a, b, fillTab[offset + 14], S43, 0xab9423a7)
+    b = II(b, c, d, a, fillTab[offset + 5], S44, 0xfc93a039)
+    a = II(a, b, c, d, fillTab[offset + 12], S41, 0x655b59c3)
+    d = II(d, a, b, c, fillTab[offset + 3], S42, 0x8f0ccc92)
+    c = II(c, d, a, b, fillTab[offset + 10], S43, 0xffeff47d)
+    b = II(b, c, d, a, fillTab[offset + 1], S44, 0x85845dd1)
+    a = II(a, b, c, d, fillTab[offset + 8], S41, 0x6fa87e4f)
+    d = II(d, a, b, c, fillTab[offset + 15], S42, 0xfe2ce6e0)
+    c = II(c, d, a, b, fillTab[offset + 6], S43, 0xa3014314)
+    b = II(b, c, d, a, fillTab[offset + 13], S44, 0x4e0811a1)
+    a = II(a, b, c, d, fillTab[offset + 4], S41, 0xf7537e82)
+    d = II(d, a, b, c, fillTab[offset + 11], S42, 0xbd3af235)
+    c = II(c, d, a, b, fillTab[offset + 2], S43, 0x2ad7d2bb)
+    b = II(b, c, d, a, fillTab[offset + 9], S44, 0xeb86d391)
+
+    --加入到之前计算的结果当中
+    result[1] = result[1] + a
+    result[2] = result[2] + b
+    result[3] = result[3] + c
+    result[4] = result[4] + d
+    result[1] = result[1] & 0xffffffff
+    result[2] = result[2] & 0xffffffff
+    result[3] = result[3] & 0xffffffff
+    result[4] = result[4] & 0xffffffff
+  end
+
+  --将Hash值转换成十六进制的字符串
+  local retStr = ""
+  for i = 1,4 do
+    for _ = 1,4 do
+      local temp = result[i] & 0x0F
+      local str = HexTable[temp + 1]
+      result[i] = result[i] >> 4
+      temp = result[i] & 0x0F
+      retStr = retStr .. HexTable[temp + 1] .. str
+      result[i] = result[i] >> 4
+    end
+  end
+
+  return retStr
+end
+
+function Base64en(data)
+  local b =basekey
+  return ((data:gsub('.', function(x)
+    local r, b='', x:byte()
+    for i = 8, 1, -1 do r = r .. (b % 2 ^ i - b % 2 ^ (i - 1) > 0 and '1' or '0') end
+    return r;
+  end) .. '0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+    if (#x < 6) then return '' end
+    local c = 0
+    for i = 1, 6 do c = c + (x:sub(i, i)=='1' and 2 ^ (6 - i) or 0) end
+    return b:sub(c + 1, c + 1)
+  end) .. ({ '', '==', '=' })[#data % 3 + 1])
+end
+
+function Base64de(str)
+  local b =basekey
+  str = string.gsub(str, '[^' .. b .. '=]', '')
+  return (str:gsub('.', function(x)
+    if (x == '=') then return '' end
+    local r, f = '', (b:find(x)-1)
+    for i = 6, 1, -1 do r = r .. (f % 2 ^ i - f % 2 ^ (i - 1) > 0 and '1' or '0') end
+    return r;
+  end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+    if (#x ~= 8) then return '' end
+    local c = 0
+    for i = 1, 8 do c = c + (x:sub(i, i) == '1' and 2 ^ (8 - i) or 0) end
+    return string.char(c)
+  end))
+end
+function jzzh(str,ms)
+  str = tostring(str)
+  if ms=="加" then
+    local index=1
+    local ret=""
+    for index=1,str:len() do
+      ret=ret..string.format("%02X",str:sub(index):byte())
+    end
+    return string.lower(ret)
+   else
+    str=str:gsub("[%s%p]",""):upper()
+    local index=1
+    local ret=""
+    for index=1,str:len(),2 do
+      ret=ret..string.char(tonumber(str:sub(index,index+1),16))
+    end
+    return ret
+  end
+end
+
+
+imeifile="/sdcard/"..string.lower(string.md5(host)).."_imei.ini" ---机器码储存文件路径
+kmfile="/sdcard/"..string.lower(string.md5(host)).."_kami.ini" ---卡密输入储存卡密路径@
+function jiami(str)
+  rc4=Base64en(str)
+  sljz=jzzh(rc4,"加")
+  return sljz
+end
+
+file=io.open(imeifile,"rb")
+if file==nil then
+  imeis=Base64en(math.random(10000000000,999999999999)..os.time())
+  io.open(imeifile, 'w')
+  io.open(imeifile,"w"):write(imeis):close()
+end
+imei=Base64de(io.open(imeifile):read("*a"))
+
+kami=io.open(kmfile,"rb")
+if kami==nil then
+  kami=""
+ else
+  kami=Base64de(io.open(kmfile):read("*a"))
+end
+
+function main()
+  local k=gg.prompt({"请输入卡密"},{kami},{"text"})
+  if k==nil then
+   else
+    km=k[1]
+    time=os.time()
+    local i=web(host.."&kami="..jiami(k[1]).."&imei="..jiami(imei).."&t="..jiami(tostring(os.time()))).content
+    if i == nil then
+      gg.toast("登录失败")
+      os.exit()
+     else
+      local i=Base64de(i)
+      local is=i:match("登录成功:(.-);")
+      local id=i:match("卡密ID:(.-);")
+      local ends=i:match("到期时间:(.-);")
+      local sysj=i:match("剩余时间:(.-);")
+      local sbm=i:match("校验密钥:(.-);")
+      local dqsjc=i:match("当前时间戳:(.-);")
+      if is=="200" then
+        if sbm==string.lower(string.md5(tostring(id..appkey..ends..os.date("%Y%m%d%H%M")))) then
+          local times=dqsjc-os.time()
+          if times<5 then--校验数据中的时间和本地时间是否大于5秒
+            io.open(kmfile,"w"):write(Base64en(km)):close()
+            gg.alert("登录成功\n到期时间:"..ends)
+            index()
+           else
+            gg.alert("数据过期")
+          end
+         else
+          gg.alert("校验失败")
+        end
+       else
+        gg.alert(i)
+        maine()
+      end
+    end
+  end
+  XGCK = -1
+end
+
+function index()
+  --把你的脚本放在这里
+function SearchWrite(Search, Write, Type) gg.clearResults() gg.setVisible(false) gg.searchNumber(Search[1][1], Type) local count = gg.getResultCount() local result = gg.getResults(count) gg.clearResults() local data = {} local base = Search[1][2] if (count > 0) then for i, v in ipairs(result) do v.isUseful = true end for k=2, #Search do local tmp = {} local offset = Search[k][2] - base local num = Search[k][1] for i, v in ipairs(result) do tmp[#tmp+1] = {} tmp[#tmp].address = v.address + offset tmp[#tmp].flags = v.flags end tmp = gg.getValues(tmp) for i, v in ipairs(tmp) do if ( tostring(v.value) ~= tostring(num) ) then result[i].isUseful = false end end end for i, v in ipairs(result) do if (v.isUseful) then data[#data+1] = v.address end end if (#data > 0) then gg.toast("搜索到"..#data.."条数据") local t = {} local base = Search[1][2] for i=1, #data do for k, w in ipairs(Write) do offset = w[2] - base t[#t+1] = {} t[#t].address = data[i] + offset t[#t].flags = Type t[#t].value = w[1] if (w[3] == true) then local item = {} item[#item+1] = t[#t] item[#item].freeze = true gg.addListItems(item) end end end gg.setValues(t) gg.toast("已修改"..#t.."条数据") gg.addListItems(t) else gg.toast("not found", false) return false end else gg.toast("Not Found") return false end end
+function split(szFullString, szSeparator) local nFindStartIndex = 1 local nSplitIndex = 1 local nSplitArray = {} while true do local nFindLastIndex = string.find(szFullString, szSeparator, nFindStartIndex) if not nFindLastIndex then nSplitArray[nSplitIndex] = string.sub(szFullString, nFindStartIndex, string.len(szFullString)) break end nSplitArray[nSplitIndex] = string.sub(szFullString, nFindStartIndex, nFindLastIndex - 1) nFindStartIndex = nFindLastIndex + string.len(szSeparator) nSplitIndex = nSplitIndex + 1 end return nSplitArray end function xgxc(szpy, qmxg) for x = 1, #(qmxg) do xgpy = szpy + qmxg[x]["offset"] xglx = qmxg[x]["type"] xgsz = qmxg[x]["value"] xgdj = qmxg[x]["freeze"] if xgdj == nil or xgdj == "" then gg.setValues({[1] = {address = xgpy, flags = xglx, value = xgsz}}) else gg.addListItems({[1] = {address = xgpy, flags = xglx, freeze = xgdj, value = xgsz}}) end xgsl = xgsl + 1 xgjg = true end end function xqmnb(qmnb) gg.clearResults() gg.setRanges(qmnb[1]["memory"]) gg.searchNumber(qmnb[3]["value"], qmnb[3]["type"]) if gg.getResultCount() == 0 then gg.toast(qmnb[2]["name"] .. "开启失败") else gg.refineNumber(qmnb[3]["value"], qmnb[3]["type"]) gg.refineNumber(qmnb[3]["value"], qmnb[3]["type"]) gg.refineNumber(qmnb[3]["value"], qmnb[3]["type"]) if gg.getResultCount() == 0 then gg.toast(qmnb[2]["name"] .. "开启失败") else sl = gg.getResults(999999) sz = gg.getResultCount() xgsl = 0 if sz > 999999 then sz = 999999 end for i = 1, sz do pdsz = true for v = 4, #(qmnb) do if pdsz == true then pysz = {} pysz[1] = {} pysz[1].address = sl[i].address + qmnb[v]["offset"] pysz[1].flags = qmnb[v]["type"] szpy = gg.getValues(pysz) pdpd = qmnb[v]["lv"] .. ";" .. szpy[1].value szpd = split(pdpd, ";") tzszpd = szpd[1] pyszpd = szpd[2] if tzszpd == pyszpd then pdjg = true pdsz = true else pdjg = false pdsz = false end end end if pdjg == true then szpy = sl[i].address xgxc(szpy, qmxg) end end if xgjg == true then gg.toast(qmnb[2]["name"] .. "开启成功🌹🌸,共修改" .. xgsl .. "条数据") else gg.toast(qmnb[2]["name"] .. "开启失败") end end end end
+function PS() end
+function setvalue(address,flags,value) PS('修改地址数值(地址,数值类型,要修改的值)') local tt={} tt[1]={} tt[1].address=address tt[1].flags=flags tt[1].value=value gg.setValues(tt) end
+function Main()
+
+
+menu = gg.multiChoice({
+"全防", 
+"范围",
+"自瞄",
+"过人头午后据点防抖",
+"美化包",
+"平板视角🇨",
+"跳远",
+"备用大厅防",
+"备用落地防卡屏",
+"退出",
+}, nil, "世人笑我太疯癫，我笑他人看不穿.雪糕只为稳定")
+if menu == nil then else 
+if menu[1] == true then A1() end 
+if menu[2] == true then A2() end 
+if menu[3] == true then A3() end 
+if menu[4] == true then A4() end 
+if menu[5] == true then A5() end 
+if menu[6] == true then A6() end 
+if menu[7] == true then A7() end 
+if menu[8] == true then B() end 
+if menu[9] == true then A() end 
+if menu[10] == true then kk() end 
+end XGCK = -1 end
+function A1()
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("12547;144387", gg.TYPE_DWORD)
+gg.searchNumber("", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.searchNumber("133792;2420996", gg.TYPE_DWORD)
+gg.searchNumber("", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.searchNumber("133000~134000;65536", gg.TYPE_DWORD)
+gg.searchNumber("133000~134000", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.searchNumber("133120;29696", gg.TYPE_DWORD)
+gg.searchNumber("", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.searchNumber("133610;133784", gg.TYPE_DWORD)
+gg.searchNumber("", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.searchNumber("133000~135000;126774", gg.TYPE_DWORD)
+gg.searchNumber("", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.searchNumber("29696;524288", gg.TYPE_DWORD)
+gg.searchNumber("29696", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.searchNumber("53248;20736", gg.TYPE_DWORD)
+gg.searchNumber("", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("133000~134000;134914", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("134914;131330", gg.TYPE_DWORD)
+gg.searchNumber("134914", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_CODE_SYS)
+gg.searchNumber("109232;2404272", gg.TYPE_DWORD)
+gg.searchNumber("", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_CODE_SYS)
+gg.searchNumber("81920;344064;262144", gg.TYPE_DWORD)
+gg.searchNumber("", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_CODE_SYS)
+gg.searchNumber("13000~14000;16384", gg.TYPE_DWORD)
+gg.searchNumber("13000~14000", gg.TYPE_DWORD)
+gg.getResults(100)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_CODE_SYS)
+gg.searchNumber("16416;17632;75537", gg.TYPE_DWORD)
+gg.searchNumber("", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_CODE_SYS)
+gg.searchNumber("13000~14000;65793", gg.TYPE_DWORD)
+gg.searchNumber("13000~14000", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("10240;4096", gg.TYPE_DWORD)
+gg.searchNumber("10240", gg.TYPE_DWORD)
+gg.getResults(20)
+gg.editAll("0",gg.TYPE_DWORD)
+gg.editAll("0",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_CODE_SYS)
+gg.searchNumber("10240;13000~14000", gg.TYPE_DWORD)
+gg.searchNumber("", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.editAll("1",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("133000~134000;134914", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("134914;131330", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("134658;131330;135682;67109633", gg.TYPE_DWORD)
+gg.searchNumber("134658~135682", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("920161819458;23;28", gg.TYPE_FLOAT)
+gg.searchNumber("23;28", gg.TYPE_FLOAT)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("131330;135682;70658:289", gg.TYPE_DWORD)
+gg.searchNumber("131330;135682;70658:289", gg.TYPE_DWORD)
+gg.getResults(1000)
+gg.editAll("67109633",gg.TYPE_FLOAT)
+gg.editAll("67109633",gg.TYPE_FLOAT)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("134914;131330", gg.TYPE_DWORD)
+gg.searchNumber("134914", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("134658;135682", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("131586;131842", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("132098;133635", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("12547;70658", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("197120", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.editAll("67109633",gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_BSS)
+gg.searchNumber("16384;16384;16384;16384::30", gg.TYPE_DWORD)
+gg.searchNumber("16384", gg.TYPE_DWORD)
+gg.getResults(10000)
+gg.getResults(10000)
+gg.searchNumber("10240", gg.TYPE_DWORD)
+gg.searchNumber("10240", gg.TYPE_DWORD)
+gg.searchNumber("10240", gg.TYPE_DWORD)
+gg.searchNumber("10240", gg.TYPE_DWORD)
+gg.getResults(999999)
+gg.toast("蓝洛全防开启成功🌹🌸🌈🦄开启成功🌹🌸")
+end
+function A2()
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("920161819458;23;28", gg.TYPE_FLOAT)
+gg.searchNumber("23;28", gg.TYPE_FLOAT)
+gg.getResults(10)
+gg.editAll("148",gg.TYPE_FLOAT)
+gg.editAll("148",gg.TYPE_FLOAT)
+gg.toast("真伤范围开启成功🌹🌸")
+end
+function A3()
+gg.setRanges()
+gg.searchNumber("511703038;511697919;509607930::", gg.TYPE_DWORD)
+gg.searchNumber("511703038", gg.TYPE_DWORD)
+gg.getResults(10)
+gg.editAll("1090519040",gg.TYPE_DWORD)
+gg.editAll("1090519040",gg.TYPE_DWORD)
+gg.toast("强力自瞄开启成功🌹🌸")
+gg.setRanges()
+gg.searchNumber("301790704;509607933;298632638::", gg.TYPE_DWORD)
+gg.searchNumber("301790704", gg.TYPE_DWORD)
+gg.getResults(1)
+gg.editAll("0",gg.TYPE_DWORD)
+gg.editAll("0",gg.TYPE_DWORD)
+gg.toast("全图自瞄开启成功🌹🌸")
+end
+function A4()
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("1954047316;1970037078;1633906508;7562578:41", gg.TYPE_DWORD)
+gg.searchNumber("1633906508", gg.TYPE_DWORD)
+gg.getResults(100)
+gg.editAll("0",gg.TYPE_DWORD)
+gg.editAll("0",gg.TYPE_DWORD)
+gg.toast("无视人头开启成功🌹🌸")
+gg.setRanges()
+gg.searchNumber("278698228;3744409728;1136883713::", gg.TYPE_FLOAT)
+gg.searchNumber("3744409728", gg.TYPE_FLOAT)
+gg.getResults(1)
+gg.editAll("0",gg.TYPE_FLOAT)
+gg.editAll("0",gg.TYPE_FLOAT)
+gg.toast("无后座开启成功🌹🌸")
+gg.setRanges()
+gg.searchNumber("1238242428;1423933328;1114450228;1833147427;7160887724::", gg.TYPE_FLOAT)
+gg.searchNumber("1114450228", gg.TYPE_FLOAT)
+gg.getResults(2)
+gg.editAll("90",gg.TYPE_FLOAT)
+gg.editAll("90",gg.TYPE_FLOAT)
+gg.toast("聚点开启成功🌹🌸")
+gg.setRanges()
+gg.searchNumber("2811160528;3744409728;1114450228;1280::", gg.TYPE_FLOAT)
+gg.searchNumber("1114450228", gg.TYPE_FLOAT)
+gg.getResults(1)
+gg.editAll("0",gg.TYPE_FLOAT)
+gg.editAll("0",gg.TYPE_FLOAT)
+gg.toast("防抖开启成功🌹🌸")
+gg.setRanges()
+gg.searchNumber("6154945427;1863896620;1114450228;0::", gg.TYPE_FLOAT)
+gg.searchNumber("1114450228", gg.TYPE_FLOAT)
+gg.getResults(1)
+gg.editAll("0",gg.TYPE_FLOAT)
+gg.editAll("0",gg.TYPE_FLOAT)
+gg.toast("完美防抖开启成功🌸🍀")
+gg.toast("开启成功🌸🍀")
+end
+function A5()
+gg.clearResults()
+gg.setRanges(32)
+gg.searchNumber("404185", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("404185", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(100)
+gg.editAll("401188", gg.TYPE_DWORD)
+gg.toast("")
+gg.clearResults()
+gg.setRanges(32)
+gg.searchNumber("405114", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("405114", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(100)
+gg.editAll("402116", gg.TYPE_DWORD)
+gg.toast("")
+gg.clearResults()
+gg.searchNumber("403251", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("403251", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(100)
+gg.editAll("403701", gg.TYPE_DWORD)
+gg.toast("")
+gg.clearResults()
+gg.searchNumber("404007", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("404007", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(100)
+gg.editAll("401312", gg.TYPE_DWORD)
+gg.toast("")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10,300,600;103,006", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10,300,600", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("103,006,013", gg.TYPE_DWORD)
+gg.toast("Mini14")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10800400;108004", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10800400", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("108004029", gg.TYPE_DWORD)
+gg.toast("平底锅")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10100400;101004", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10100400", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("101004025", gg.TYPE_DWORD)
+gg.toast("M416")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10100100;101001", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10100100", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("101001025", gg.TYPE_DWORD)
+gg.toast("AK47")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10100800;101008", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10100800", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("101008016", gg.TYPE_DWORD)
+gg.toast("M762")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10100600;101006", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10100600", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("101,006,011", gg.TYPE_DWORD)
+gg.toast("AUG")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10100500;101005", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10100500", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("101005011", gg.TYPE_DWORD)
+gg.toast("GROZA")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10100300;101003", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10100300", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("101003024", gg.TYPE_DWORD)
+gg.toast("SCAR-L")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10,100,700;101,007", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10100700", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("101007003", gg.TYPE_DWORD)
+gg.toast("QBZ")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10,100,900;101,009", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10100900", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("101009002", gg.TYPE_DWORD)
+gg.toast("Mk47")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10,101,000;101,010", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10,101,000", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("10,101,0004", gg.TYPE_DWORD)
+gg.toast("G36C")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10,200,100;102,001", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10,200,100", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("10,200,1013", gg.TYPE_DWORD)
+gg.toast("UZI")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10,200,200;102,002", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10,200,200", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("10,200,2019", gg.TYPE_DWORD)
+gg.toast("UMP45")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10,200,300;102,003", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10,200,300", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("10,200,3008", gg.TYPE_DWORD)
+gg.toast("Vector")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10,200,500;102,005", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10,200,500", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("10,200,5001", gg.TYPE_DWORD)
+gg.toast("野牛")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10,300,400;103,004", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10,300,400", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("10,300,4010", gg.TYPE_DWORD)
+gg.toast("SKS")
+gg.setRanges(32)
+gg.setRanges(gg.REGION_ANONYMOUS)
+gg.searchNumber("10,300,500;103,005", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("10,300,500", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("10,300,5007", gg.TYPE_DWORD)
+gg.toast("VSS")
+end
+function A6()
+qmnb = {
+{["memory"] = 32},
+{["name"] = "上帝视角开启成功🌹🍀"},
+{["value"] = 6.852349490548355E-41, ["type"] = 16},
+{["lv"] = 2.802596928649634E-45, ["offset"] = -44, ["type"] = 16},
+{["lv"] = 220.0, ["offset"] = -32, ["type"] = 16},
+{["lv"] = 178.0, ["offset"] = -8, ["type"] = 16},
+{["lv"] = 15.0, ["offset"] = -4, ["type"] = 16},
+}
+qmxg = {
+{["value"] = 350, ["offset"] = -32, ["type"] = 16},
+
+}
+xqmnb(qmnb)
+end
+function A7()
+gg.clearResults()
+gg.setRanges(16384)
+gg.searchNumber("-305132800;-409010176;-509587455;-442564256;-443547640;-444334072", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("-305132800", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(10)
+gg.editAll("0", gg.TYPE_DWORD)
+gg.toast("加速跳远开启成功🌹🍀")
+end
+
+function B()
+gg.clearResults()
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("131,330;135,682;70,658:289", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.searchNumber("131,330;135,682;70,658:289", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.getResults(1000)
+gg.editAll("67,109,633", gg.TYPE_FLOAT)
+gg.clearResults()
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("134914;131330", gg.TYPE_DWORD)
+gg.refineNumber("134914", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633", gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("134658;135682", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633", gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("131586;131842", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633", gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("132098;133635", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633", gg.TYPE_DWORD)
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("12547;70658", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633", gg.TYPE_DWORD)
+gg.clearResults()
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("197,120", gg.TYPE_DWORD)
+gg.getResults(50500)
+gg.editAll("67109633", gg.TYPE_DWORD)
+gg.clearResults()
+gg.setRanges(16)
+gg.searchNumber("16384;16384;16384;16384::30", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.refineNumber("16384", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+if v.flags == gg.TYPE_DWORD then
+v.value = "79999"
+v.freeze = true
+end
+end
+gg.addListItems(t)
+t = nil
+
+qmnb = {
+{["memory"] = 4},
+{["name"] = ""},
+{["value"] = 10240, ["type"] = 4},
+{["lv"] = 2131, ["offset"] = 32, ["type"] = 4},
+}
+qmxg = {
+{["value"] = 0, ["offset"] = 0, ["type"] = gg.TYPE_DWORD,["freeze"]=true},
+}
+xqmnb(qmnb)
+gg.clearResults()
+gg.setRanges(gg.REGION_JAVA_HEAP)
+gg.searchNumber("10240", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.refineNumber("10240", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+	if v.flags == gg.TYPE_DWORD then
+		v.value = "0"
+		v.freeze = true
+	end
+end
+gg.addListItems(t)
+t = nil
+gg.clearResults()
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("10240;67,043,328;65,536", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.refineNumber("10240", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+if v.flags == gg.TYPE_DWORD then
+          v.value = "0"
+          v.freeze = true
+	end
+end
+gg.addListItems(t)
+t = nil
+gg.clearResults()
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("2131", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.refineNumber("2062", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+if v.flags == gg.TYPE_DWORD then
+          v.value = "0"
+          v.freeze = true
+	end
+end
+gg.addListItems(t)
+t = nil
+gg.clearResults()
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("1,937,010,277;10,240", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.refineNumber("10240", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+if v.flags == gg.TYPE_DWORD then
+          v.value = "0"
+          v.freeze = true
+	end
+end
+gg.addListItems(t)
+t = nil
+gg.clearResults()
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("10,240;8,388,610", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.refineNumber("10240", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+if v.flags == gg.TYPE_DWORD then
+          v.value = "0"
+          v.freeze = true
+	end
+end
+gg.addListItems(t)
+t = nil
+gg.clearResults()
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("10,240;10,240;10,240;10,240;10,240::30", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.refineNumber("10240", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+if v.flags == gg.TYPE_DWORD then
+          v.value = "0"
+          v.freeze = true          
+	end
+end
+gg.addListItems(t)
+t = nil
+
+gg.clearResults()
+gg.setRanges(4)
+gg.searchNumber("10240;10,241;10,496;10,497:13", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.refineNumber("10240", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+	if v.flags == gg.TYPE_DWORD then
+		v.value = "0"
+		v.freeze = true
+	end
+end
+gg.addListItems(t)
+t = nil
+gg.clearResults()
+gg.setRanges(gg.REGION_C_ALLOC)
+gg.searchNumber("10240;3;288:12", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.refineNumber("10240", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+	if v.flags == gg.TYPE_DWORD then
+		v.value = "0"
+		v.freeze = true
+	end
+end
+gg.addListItems(t)
+t = nil
+gg.toast("雪糕备用：大厅全防开启成功🍀🌹")
+end
+
+
+function A()
+gg.clearResults()
+gg.setRanges(16)
+gg.searchNumber("79999;73730", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+if v.flags == gg.TYPE_DWORD then
+v.value = "16384"
+v.freeze = true
+end
+end
+gg.addListItems(t)
+t = nil
+gg.clearResults()
+gg.setRanges(16)
+gg.searchNumber("79999", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+gg.refineNumber("79999", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1)
+revert = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+local t = gg.getResults(10000, nil, nil, nil, nil, nil, nil, nil, nil)
+for i, v in ipairs(t) do
+if v.flags == gg.TYPE_DWORD then
+v.value = "16384"
+v.freeze = true
+end
+end
+gg.addListItems(t)
+t = nil
+gg.toast("雪糕稳定：落地防卡屏开启成功🍀🌹")
+end
+
+
+function kk() os.exit()end while true do if gg.isVisible(true) then XGCK = 1 gg.setVisible(false)end gg.clearResults() if XGCK == 1 then Main()end end
+
+
+  --把你的脚本放在这里
+end
+
+
+
+function maine()
+  while true do
+    if gg.isVisible(true) then
+      XGCK = 1
+      gg.setVisible(false)
+    end
+    gg.clearResults()
+    if XGCK == 1 then
+      main()
+    end
+  end
+end
+maine()
